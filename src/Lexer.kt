@@ -15,7 +15,7 @@ public enum class Type {
     END;
 }
 
-class Token(val tokenType: Type, val value: String?) {
+class Token(val tokenType: Type, val value: JsonObject?) {
     fun toString() : String {
         val v = if (value != null) { " (" + value + ")" } else {""}
         val result = tokenType.toString() + v
@@ -27,6 +27,9 @@ public class Lexer(val fileName: String) {
     val bytes = File(fileName).readBytes()
     val END = Token(Type.END, null)
     var index = 0
+
+    val INT = Pattern.compile("[-]?[0-9]+")
+    val DOUBLE = Pattern.compile(INT.toString() + "((\\.[0-9]+)?([eE][-+]?[0-9]+)?)")
 
     fun isSpace(c: Char): Boolean {
         return c == ' ' || c == '\r' || c == '\n' || c == 't'
@@ -40,6 +43,11 @@ public class Lexer(val fileName: String) {
         return index >= bytes.size
     }
 
+    val BOOLEAN_LETTERS = hashSetOf('f', 'a', 'l', 's', 'e', 't', 'r', 'u')
+    private fun isBooleanLetter(c: Char) : Boolean {
+        return BOOLEAN_LETTERS.contains(Character.toLowerCase(c))
+    }
+
     fun nextToken() : Token {
 
         if (isDone()) {
@@ -49,6 +57,7 @@ public class Lexer(val fileName: String) {
         var tokenType = Type.END
         var c = nextChar()
         var currentValue = StringBuilder()
+        var jsonValue: JsonObject? = null
 
         while (! isDone() && isSpace(c)) {
             c = nextChar()
@@ -66,6 +75,7 @@ public class Lexer(val fileName: String) {
                     }
                     c = nextChar()
                 }
+                jsonValue = JsonString(currentValue.toString())
             } else {
                 throw RuntimeException("Unterminated string")
             }
@@ -83,14 +93,24 @@ public class Lexer(val fileName: String) {
             tokenType = Type.COMMA
         } else if (! isDone()) {
             while (index < bytes.size && c == '-' || c == '+' || c == '.'
-                    || c.isDigit()) {
+                    || c.isDigit() || isBooleanLetter(c)) {
                 currentValue.append(c)
                 c = nextChar()
+            }
+            val v = currentValue.toString()
+            if (INT.matcher(v).matches()) {
+                jsonValue = JsonInteger(Integer.parseInt(v))
+            } else if (DOUBLE.matcher(v).matches()) {
+                jsonValue = JsonDouble(java.lang.Double.parseDouble(v))
+            } else if ("true".equals(v.toLowerCase())) {
+                jsonValue = JsonBoolean(true)
+            } else if ("false".equals(v.toLowerCase())) {
+                jsonValue = JsonBoolean(false)
             }
             tokenType = Type.VALUE
         }
 
         val value = currentValue.toString()
-        return Token(tokenType, if (value.length() > 0) value else null)
+        return Token(tokenType, if (value.length() > 0) jsonValue else null)
     }
 }
