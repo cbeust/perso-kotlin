@@ -1,7 +1,5 @@
 package com.beust.klaxon
 
-import jet.MutableMap
-
 open public class JsonObject {
     val map = hashMapOf<String, JsonObject>()
 
@@ -11,6 +9,10 @@ open public class JsonObject {
 
     fun put(key: String, value: JsonObject) {
         map.put(key, value)
+    }
+
+    open fun toString() : String {
+        return map.toString()
     }
 
     open fun asString() : String {
@@ -23,28 +25,38 @@ public class JsonString(val value: String) : JsonObject() {
         return value
     }
 
-    fun toString() : String {
+    override fun toString() : String {
         return "{String: \"$value\"}"
     }
 }
 
 public class JsonInteger(val value: Int) : JsonObject() {
-    fun toString() : String {
+    override fun toString() : String {
         return "{Integer: $value}"
     }
 }
 
 public class JsonDouble(val value: Double): JsonObject() {
-    fun toString() : String {
+    override fun toString() : String {
         return "{Double: $value}"
     }
 }
 
 public class JsonBoolean(val value: Boolean) : JsonObject() {
-    fun toString() : String {
+    override fun toString() : String {
         return "{Boolean: $value}"
     }
 }
 
-public class JsonArray(value: Array<JsonObject>) : JsonObject() {
+public class JsonArray() : JsonObject() {
+    val array = arrayListOf<JsonObject>()
+
+    fun add(o : JsonObject) {
+        array.add(o)
+    }
+
+    override fun toString() : String {
+        val result = "{Array: " + array.toString() + "}"
+        return result
+    }
 }

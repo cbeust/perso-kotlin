@@ -11,7 +11,6 @@ public enum class Type {
     RIGHT_BRACKET;
     COMMA;
     COLON;
-    STRING;
     END;
 }
 
@@ -32,11 +31,15 @@ public class Lexer(val fileName: String) {
     val DOUBLE = Pattern.compile(INT.toString() + "((\\.[0-9]+)?([eE][-+]?[0-9]+)?)")
 
     fun isSpace(c: Char): Boolean {
-        return c == ' ' || c == '\r' || c == '\n' || c == 't'
+        return c == ' ' || c == '\r' || c == '\n' || c == '\t'
     }
 
     private fun nextChar() : Char {
         return bytes[index++].toChar()
+    }
+
+    private fun peekChar() : Char {
+        return bytes[index].toChar()
     }
 
     private fun isDone() : Boolean {
@@ -46,6 +49,10 @@ public class Lexer(val fileName: String) {
     val BOOLEAN_LETTERS = hashSetOf('f', 'a', 'l', 's', 'e', 't', 'r', 'u')
     private fun isBooleanLetter(c: Char) : Boolean {
         return BOOLEAN_LETTERS.contains(Character.toLowerCase(c))
+    }
+
+    fun isValueLetter(c: Char) : Boolean {
+        return c == '-' || c == '+' || c == '.' || c.isDigit() || isBooleanLetter(c)
     }
 
     fun nextToken() : Token {
@@ -64,7 +71,7 @@ public class Lexer(val fileName: String) {
         }
 
         if ('"' == c) {
-            tokenType = Type.STRING
+            tokenType = Type.VALUE
             if (! isDone()) {
                 c = nextChar()
                 while (index < bytes.size && c != '"') {
@@ -92,10 +99,13 @@ public class Lexer(val fileName: String) {
         } else if (',' == c) {
             tokenType = Type.COMMA
         } else if (! isDone()) {
-            while (index < bytes.size && c == '-' || c == '+' || c == '.'
-                    || c.isDigit() || isBooleanLetter(c)) {
+            while (isValueLetter(c)) {
                 currentValue.append(c)
-                c = nextChar()
+                if (! isValueLetter(peekChar())) {
+                    break;
+                } else {
+                    c = nextChar()
+                }
             }
             val v = currentValue.toString()
             if (INT.matcher(v).matches()) {
